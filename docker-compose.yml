@@ -1,0 +1,37 @@
+services:
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --artifacts-destination /mlartifacts
+    volumes:
+      - mlartifacts:/mlartifacts
+    ports:
+      - "5000:5000"
+
+volumes:
+  pgdata:
+  mlartifacts:
